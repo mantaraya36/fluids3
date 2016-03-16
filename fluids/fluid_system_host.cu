@@ -39,37 +39,67 @@
 
 */
 
-#include <conio.h>
+#ifdef _WIN32
 //#include <cutil.h>				// cutil32.lib
 #include <cutil_math.h>				// cutil32.lib
+#else
+#include <math_functions.h>
+#endif
+
 #include <string.h>
 #include <assert.h>
 
+#ifdef _WIN32
 #include <windows.h>
+#include <conio.h>
+#endif
 
 //#include <cuda_gl_interop.h>
 #include <stdio.h>
 #include <math.h>
+#include <stdarg.h>
 
-extern void app_printf ( char* format, ... );
-extern void app_printEXIT ( char* format, ... );
+extern void app_printf (const char* format, ... );
+//extern void app_printEXIT (const char* format, ... );
 extern char app_getch ();
+
+extern void app_printEXIT_ ( char* format, ... )
+{
+	// Note: This is the >only< way to do this. There is no general way to
+	// pass on all the arguments from one ellipsis function to another.
+	// The function vfprintf was specially designed to allow this.
+	va_list argptr;
+	va_start (argptr, format);
+	vfprintf ( stderr, format, argptr);
+	va_end (argptr);
+	fflush ( stderr );
+#ifdef _WIN32
+	_getch();
+#else
+	getchar();
+#endif
+	exit(-1);
+}
 
 #include "fluid_system_host.cuh"		
 #include "fluid_system_kern.cuh"
+
+#include "cutil_math.h"
+#include <math_functions.h>
 
 FluidParams		fcuda;		// CPU Fluid params
 FluidParams*	mcuda;		// GPU Fluid params
 
 bufList			fbuf;		// GPU Particle buffers
 
-bool cudaCheck ( cudaError_t status, char* msg )
+bool cudaCheck ( cudaError_t status, const char* msg )
 {
 	if ( status != cudaSuccess ) {
 		app_printf ( "CUDA ERROR: %s\n", cudaGetErrorString ( status ) );
 		app_getch ();
-
+#ifdef _WIN32
 		MessageBox ( NULL, cudaGetErrorString ( status), msg, MB_OK );
+#endif
 		return false;
 	} else {
 		//app_printf ( "%s. OK.\n", msg );
@@ -80,8 +110,8 @@ bool cudaCheck ( cudaError_t status, char* msg )
 
 void cudaExit ()
 {
-	int argc = 1;	
-	char* argv[] = {"fluids"};
+//	int argc = 1;
+//	char* argv[] = {"fluids"};
 
 	cudaDeviceReset();
 }
@@ -89,23 +119,23 @@ void cudaExit ()
 // Initialize CUDA
 void cudaInit()
 {   
-	int argc = 1;
-	char* argv[] = {"fluids"};
+//	int argc = 1;
+//	char* argv[] = {"fluids"};
 
 	int count = 0;
 	int i = 0;
 
 	cudaError_t err = cudaGetDeviceCount(&count);
-	if ( err==cudaErrorInsufficientDriver) { app_printEXIT( "CUDA driver not installed.\n"); }
-	if ( err==cudaErrorNoDevice) { app_printEXIT ( "No CUDA device found.\n"); }
-	if ( count == 0) { app_printEXIT ( "No CUDA device found.\n"); }
+	if ( err==cudaErrorInsufficientDriver) { app_printEXIT_( "CUDA driver not installed.\n"); }
+	if ( err==cudaErrorNoDevice) { app_printEXIT_ ( "No CUDA device found.\n"); }
+	if ( count == 0) { app_printEXIT_ ( "No CUDA device found.\n"); }
 
 	for(i = 0; i < count; i++) {
 		cudaDeviceProp prop;
 		if(cudaGetDeviceProperties(&prop, i) == cudaSuccess)
 			if(prop.major >= 1) break;
 	}
-	if(i == count) { app_printEXIT ( "No CUDA device found.\n");  }
+	if(i == count) { app_printEXIT_ ( "No CUDA device found.\n");  }
 	cudaSetDevice(i);
 
 	app_printf( "CUDA initialized.\n");
@@ -197,7 +227,7 @@ void FluidSetupCUDA ( int num, int gsrch, int3 res, float3 size, float3 delta, f
 	fcuda.gridSrch = gsrch;
 	fcuda.gridAdjCnt = gsrch*gsrch*gsrch;
 	fcuda.gridScanMax = res;
-	fcuda.gridScanMax -= make_int3( fcuda.gridSrch, fcuda.gridSrch, fcuda.gridSrch );
+	fcuda.gridScanMax = fcuda.gridScanMax - make_int3( fcuda.gridSrch, fcuda.gridSrch, fcuda.gridSrch );
 	fcuda.chk = chk;
 
 	// Build Adjacency Lookup

@@ -43,6 +43,7 @@
 #include "fluid_system_kern.cuh"
 
 #include "cutil_math.h"
+#include "math_functions.h"
 
 #include "radixsort.cu"						// Build in RadixSort
 
@@ -71,7 +72,7 @@ __global__ void insertParticles ( bufList buf, int pnum )
 		buf.mgcell[i] = gs;											// Grid cell insert.
 		buf.mgndx[i] = atomicAdd ( &buf.mgridcnt[ gs ], 1 );		// Grid counts.
 
-		gcf = (-make_float3(poff,poff,poff) + buf.mpos[i] - gridMin) * gridDelta;
+		gcf = (-1.0 * make_float3(poff,poff,poff) + buf.mpos[i] - gridMin) * gridDelta;
 		gc = make_int3( int(gcf.x), int(gcf.y), int(gcf.z) );
 		gs = ( gc.y * gridRes.z + gc.z)*gridRes.x + gc.x;		
 	} else {

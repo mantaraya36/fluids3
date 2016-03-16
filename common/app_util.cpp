@@ -110,7 +110,7 @@ float getTextX ( char* msg )	{ return g_2D.getTextX(msg); }
 float getTextY ( char* msg )	{ return g_2D.getTextY(msg); }
 
 void drawGui ()		{ g_Gui.Draw(); }
-int  addGui ( float x, float y, float w, float h, char* name, int gtype, int dtype, void* data, float vmin, float vmax ) { return g_Gui.AddGui ( x, y, w, h, name, gtype, dtype, data, vmin, vmax ); }
+int  addGui ( float x, float y, float w, float h, const char* name, int gtype, int dtype, void* data, float vmin, float vmax ) { return g_Gui.AddGui ( x, y, w, h, name, gtype, dtype, data, vmin, vmax ); }
 bool guiChanged ( int n )  { return g_Gui.guiChanged(n); }
 bool guiMouseDown ( float x, float y )	{ return g_Gui.MouseDown(x,y); }
 bool guiMouseDrag ( float x, float y )	{ return g_Gui.MouseDrag(x,y); }
@@ -843,7 +843,7 @@ void nvDraw::MakeShaders2D ()
 			"    return input.color * float4( 1, 1, 1, intex.Sample ( sampleLinear, input.tex ).x) ;\n"
 			"}\n";
 
-		DWORD dwShaderFlags = D3D10_SHADER_ENABLE_STRICTNESS;
+		ulong dwShaderFlags = D3D10_SHADER_ENABLE_STRICTNESS;
 		#ifdef _DEBUG
 			dwShaderFlags |= D3D10_SHADER_DEBUG;
 		#endif
@@ -980,7 +980,7 @@ nvGui::nvGui ()
 	mActiveGui = -1;
 }
 
-int nvGui::AddGui ( float x, float y, float w, float h, char* name, int gtype, int dtype, void* data, float vmin, float vmax  )
+int nvGui::AddGui ( float x, float y, float w, float h, const char* name, int gtype, int dtype, void* data, float vmin, float vmax  )
 {
 	Gui g;
 
@@ -1006,9 +1006,11 @@ bool nvGui::guiChanged ( int n )
 	return false;
 }
 
+#ifdef _WIN32
 inline float log2 ( double x ) {
 	return log(x)/log(2.0);
 }
+#endif
 
 void nvGui::Draw ()
 {
@@ -10913,7 +10915,7 @@ void MatrixF::Print ( char* fname )
 		}
 		fprintf ( fp, "%s\n", buf);
 	}
-	fprintf ( fp, "---------------------------------------\n", buf);
+	fprintf ( fp, "---------------------------------------\n");
 	fflush ( fp );
 	fclose ( fp );	
 }
@@ -11391,10 +11393,10 @@ std::string Matrix4F::WriteToStr ()
 {
 	char buf[4096];
 	std::string str;
-	sprintf_s ( buf, 4096, "   %f %f %f %f\n", data[0], data[1], data[2], data[3] ); str = buf;
-	sprintf_s ( buf, 4096, "   %f %f %f %f\n", data[4], data[5], data[6], data[7] ); str += buf;
-	sprintf_s ( buf, 4096, "   %f %f %f %f\n", data[8], data[9], data[10], data[11] ); str += buf;
-	sprintf_s ( buf, 4096, "   %f %f %f %f\n", data[12], data[13], data[14], data[15] ); str += buf;
+	snprintf ( buf, 4096, "   %f %f %f %f\n", data[0], data[1], data[2], data[3] ); str = buf;
+	snprintf ( buf, 4096, "   %f %f %f %f\n", data[4], data[5], data[6], data[7] ); str += buf;
+	snprintf ( buf, 4096, "   %f %f %f %f\n", data[8], data[9], data[10], data[11] ); str += buf;
+	snprintf ( buf, 4096, "   %f %f %f %f\n", data[12], data[13], data[14], data[15] ); str += buf;
 	return str;
 }
 

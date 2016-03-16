@@ -44,12 +44,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <windows.h>
+//#include <windows.h>
 
 #include "app_opengl.h"
-#include "app_perf.h"
+//#include "app_perf.h"
 
-#include "fluid_defs.h"
+#define BUILD_CUDA
+//#include "fluid_defs.h"
 
 #ifdef BUILD_CUDA
 	#include "fluid_system_host.cuh"	
@@ -186,7 +187,7 @@ void drawScene ( float* viewmat, bool bShade )
 void drawInfo ()
 {
 	
-	Time start, stop;
+	TimeClass start, stop;
 
 	glDisable ( GL_LIGHTING );  
 	glDisable ( GL_DEPTH_TEST );
@@ -299,7 +300,9 @@ void display ()
 	draw2D ();
 
 	// Swap buffers
-	SwapBuffers ( g_hDC );
+	// FIXME put back
+	glutSwapBuffers();
+//	swapBuffers ( g_hDC );
 
 	PERF_POP ();
 

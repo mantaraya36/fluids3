@@ -46,9 +46,17 @@
 
 #include "app_perf.h"
 
+#include <fcntl.h>
+#include <stdarg.h>
+#include <cstring>
+#include <cstdlib>
+
+#ifdef _WIN32
 #include <io.h>
-#include <fcntl.h>	
 #include <conio.h>
+#else
+
+#endif
 
 bool				g_perfInit = false;			// Is perf started? Checks for DLL
 bool				g_perfOn = false;			// Is perf on? DLL was found. Otherwise no perf.
@@ -81,7 +89,7 @@ void PERF_PUSH ( const char* msg )
 		if ( g_perfGPU ) (*g_nvtxPush) (msg);
 		if ( g_perfCPU ) {
 			strncpy ( (char*) g_perfMsg[ g_perfLevel ], msg, 256 );
-			g_perfStack [ g_perfLevel ] = Time::GetSystemNSec ();				
+			g_perfStack [ g_perfLevel ] = TimeClass::GetSystemNSec ();
 			if ( g_perfLevel < g_perfPrintLev ) {
 				PERF_PRINTF ( "%*s%s\n", g_perfLevel <<1, "", msg );
 				if ( g_perfFile != 0x0 ) fprintf ( g_perfFile, "%*s%s\n", g_perfLevel <<1, "", msg );
@@ -96,7 +104,7 @@ float PERF_POP ()
 		if ( g_perfGPU ) (*g_nvtxPop) ();
 		g_perfLevel--;
 		if ( g_perfCPU ) {
-			sjtime curr = Time::GetSystemNSec ();
+			sjtime curr = TimeClass::GetSystemNSec ();
 			curr -= g_perfStack [ g_perfLevel ];
 			float msec = float(curr) / MSEC_SCALAR;
 			if ( g_perfLevel < g_perfPrintLev ) {
@@ -123,6 +131,7 @@ void PERF_SET ( bool cpu, int lev, bool gpu, char* fname )
 
 void PERF_INIT ( bool bRequireDLL )
 {
+#ifdef _WIN32
 	g_perfInit = true;
 	g_perfOn = false;
 	g_perfLevel = 0;
@@ -156,6 +165,9 @@ void PERF_INIT ( bool bRequireDLL )
 		int hConHandle = _open_osfhandle(lStdHandle, _O_TEXT);
 		g_perfCons = _fdopen( hConHandle, "w" );
 	}
+#else
+	// TODO add performance markers on other platforms
+#endif
 }
 
 
@@ -179,8 +191,8 @@ void PERF_INIT ( bool bRequireDLL )
 	LARGE_INTEGER	m_BaseFreq;
 #endif
 
-const int Time::m_DaysInMonth[13] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
-bool Time::m_Started = false;
+const int TimeClass::m_DaysInMonth[13] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+bool TimeClass::m_Started = false;
 sjtime			m_BaseTime;
 sjtime			m_BaseTicks;
 
@@ -199,7 +211,7 @@ void start_timing ( sjtime base )
 	#endif
 }
 
-sjtime Time::GetSystemMSec ()
+sjtime TimeClass::GetSystemMSec ()
 {
 	#ifdef _MSC_VER
 		return m_BaseTime + sjtime(timeGetTime() - m_BaseTicks)*MSEC_SCALAR;
@@ -211,7 +223,7 @@ sjtime Time::GetSystemMSec ()
 	#endif
 }
 
-sjtime Time::GetSystemNSec ()
+sjtime TimeClass::GetSystemNSec ()
 {
 	#ifdef _MSC_VER
 		LARGE_INTEGER currCount;
@@ -222,13 +234,13 @@ sjtime Time::GetSystemNSec ()
 	#endif	
 }
 
-void Time::SetTimeNSec ()
+void TimeClass::SetTimeNSec ()
 {
 	m_CurrTime = GetSystemNSec ();
 }
 
 
-Time::Time ()
+TimeClass::TimeClass ()
 {	
 	if ( !m_Started ) {
 		m_Started = true;			
@@ -248,7 +260,7 @@ Time::Time ()
 
 // GetScaledJulianTime
 // Returns -1.0 if the time specified is invalid.
-sjtime Time::GetScaledJulianTime ( int hr, int min, int m, int d, int y, int s, int ms, int ns )
+sjtime TimeClass::GetScaledJulianTime ( int hr, int min, int m, int d, int y, int s, int ms, int ns )
 {
 	double MJD;				// Modified Julian Date (JD - 2400000.5)
 	sjtime SJT;				// Scaled Julian Time SJT = MJD * 86400000 + UT
@@ -274,18 +286,18 @@ sjtime Time::GetScaledJulianTime ( int hr, int min, int m, int d, int y, int s, 
 	return SJT;
 }
 
-sjtime Time::GetScaledJulianTime ( int hr, int min, int m, int d, int y )
+sjtime TimeClass::GetScaledJulianTime ( int hr, int min, int m, int d, int y )
 {
 	return GetScaledJulianTime ( hr, min, m, d, y, 0, 0, 0 );
 }
 
-void Time::GetTime ( sjtime SJT, int& hr, int& min, int& m, int& d, int& y)
+void TimeClass::GetTime ( sjtime SJT, int& hr, int& min, int& m, int& d, int& y)
 {
 	int s = 0, ms = 0, ns = 0;
 	GetTime ( SJT, hr, min, m, d, y, s, ms, ns );
 }
 
-void Time::GetTime ( sjtime SJT, int& hr, int& min, int& m, int& d, int& y, int& s, int &ms, int& ns)
+void TimeClass::GetTime ( sjtime SJT, int& hr, int& min, int& m, int& d, int& y, int& s, int &ms, int& ns)
 {	
 	// Compute Universal Time from SJT
 	sjtime UT = sjtime( SJT % sjtime( DAY_SCALAR ) );
@@ -333,24 +345,24 @@ void Time::GetTime ( sjtime SJT, int& hr, int& min, int& m, int& d, int& y, int&
 	//           32 /         1 = 32	
 }
 
-void Time::GetTime (int& s, int& ms, int& ns )
+void TimeClass::GetTime (int& s, int& ms, int& ns )
 {
 	int hr, min, m, d, y;
 	GetTime ( m_CurrTime, hr, min, m, d, y, s, ms, ns );
 }
 
 
-void Time::GetTime (int& hr, int& min, int& m, int& d, int& y)
+void TimeClass::GetTime (int& hr, int& min, int& m, int& d, int& y)
 {
 	GetTime ( m_CurrTime, hr, min, m, d, y);
 }
 
-void Time::GetTime (int& hr, int& min, int& m, int& d, int& y, int& s, int& ms, int& ns)
+void TimeClass::GetTime (int& hr, int& min, int& m, int& d, int& y, int& s, int& ms, int& ns)
 {
 	GetTime ( m_CurrTime, hr, min, m, d, y, s, ms, ns);
 }
 
-bool Time::SetTime ( int sec )
+bool TimeClass::SetTime ( int sec )
 {
 	int hr, min, m, d, y;
 	GetTime ( m_CurrTime, hr, min, m, d, y );
@@ -358,7 +370,7 @@ bool Time::SetTime ( int sec )
 	return true;
 }
 
-bool Time::SetTime ( int sec, int msec )
+bool TimeClass::SetTime ( int sec, int msec )
 {
 	int hr, min, m, d, y;
 	GetTime ( m_CurrTime, hr, min, m, d, y );
@@ -366,7 +378,7 @@ bool Time::SetTime ( int sec, int msec )
 	return true;
 }
 
-bool Time::SetTime (int hr, int min, int m, int d, int y)
+bool TimeClass::SetTime (int hr, int min, int m, int d, int y)
 {
 	int s, ms, ns;
 	GetTime ( s, ms, ns );
@@ -375,14 +387,14 @@ bool Time::SetTime (int hr, int min, int m, int d, int y)
 	return true;
 }
 
-bool Time::SetTime (int hr, int min, int m, int d, int y, int s, int ms, int ns)
+bool TimeClass::SetTime (int hr, int min, int m, int d, int y, int s, int ms, int ns)
 {
 	m_CurrTime = GetScaledJulianTime ( hr, min, m, d, y, s, ms, ns );
 	if (m_CurrTime == -1.0) return false;
 	return true;
 }
 
-bool Time::SetTime ( std::string line )
+bool TimeClass::SetTime ( std::string line )
 {
 	int hr, min, m, d, y;
 	std::string dat;
@@ -399,7 +411,7 @@ bool Time::SetTime ( std::string line )
 	return SetTime ( hr, min, m, d, y);
 }
 
-bool Time::SetDate ( std::string line )
+bool TimeClass::SetDate ( std::string line )
 {
 	int hr, min, m, d, y;
 	std::string dat;
@@ -416,7 +428,7 @@ bool Time::SetDate ( std::string line )
 	return SetTime ( hr, min, m, d, y);
 }
 
-std::string Time::GetDayOfWeekName ()
+std::string TimeClass::GetDayOfWeekName ()
 {
 	switch (GetDayOfWeek()) {
 	case 1:		return "Sunday";	break;
@@ -430,7 +442,7 @@ std::string Time::GetDayOfWeekName ()
 	return "day error";
 }
 
-int Time::GetDayOfWeek ()
+int TimeClass::GetDayOfWeek ()
 {
 	// Compute Modified Julian Date
 	double MJD = (double) m_CurrTime / sjtime( DAY_SCALAR );
@@ -444,7 +456,7 @@ int Time::GetDayOfWeek ()
 	return dow ;
 }
 
-int Time::GetWeekOfYear ()
+int TimeClass::GetWeekOfYear ()
 {
 	int hr, min, m, d, y;
 	GetTime ( hr, min, m, d, y );
@@ -458,22 +470,22 @@ int Time::GetWeekOfYear ()
 	return int((mjd_curr - mjd_start + dow -1 ) / 7 );
 }
 
-int Time::GetElapsedDays ( Time& base )
+int TimeClass::GetElapsedDays ( TimeClass& base )
 {
 	return int( sjtime(m_CurrTime - base.GetSJT() ) / sjtime( DAY_SCALAR ) );
 }
 
-int Time::GetElapsedWeeks ( Time& base )
+int TimeClass::GetElapsedWeeks ( TimeClass& base )
 {
 	return GetElapsedDays(base) / 7;
 }
 
-int Time::GetElapsedMonths ( Time& base)
+int TimeClass::GetElapsedMonths ( TimeClass& base)
 {
 	return int ( double(GetElapsedDays(base)) / 30.416 );
 }
 
-int Time::GetElapsedYears ( Time& base )
+int TimeClass::GetElapsedYears ( TimeClass& base )
 {
 	// It is much easier to compute this in m/d/y format rather
 	// than using julian dates.
@@ -500,13 +512,13 @@ int Time::GetElapsedYears ( Time& base )
 	return -1;
 }
 
-int Time::GetFracDay ( Time& base )
+int TimeClass::GetFracDay ( TimeClass& base )
 {
 	// Resolution = 5-mins
 	return int( sjtime(m_CurrTime - base.GetSJT() ) % sjtime(DAY_SCALAR) ) / (MIN_SCALAR*5);
 }
 
-int Time::GetFracWeek ( Time& base )
+int TimeClass::GetFracWeek ( TimeClass& base )
 {
 	// Resolution = 1 hr
 	int day = GetElapsedDays(base) % 7;		// day in week
@@ -514,7 +526,7 @@ int Time::GetFracWeek ( Time& base )
 	return day * 24 + hrs;
 }
 
-int Time::GetFracMonth ( Time& base )
+int TimeClass::GetFracMonth ( TimeClass& base )
 {
 	// Resolution = 4 hrs
 	int day = (int) fmod ( double(GetElapsedDays(base)), 30.416 );	// day in month
@@ -522,7 +534,7 @@ int Time::GetFracMonth ( Time& base )
 	return day * (24 / 4) + hrs;
 }
 
-int Time::GetFracYear ( Time& base )
+int TimeClass::GetFracYear ( TimeClass& base )
 {
 	// It is much easier to compute this in m/d/y format rather
 	// than using julian dates.
@@ -555,7 +567,7 @@ int Time::GetFracYear ( Time& base )
 	}	
 }
 
-std::string Time::GetReadableDate ()
+std::string TimeClass::GetReadableDate ()
 {
 	char buf[200];
 	std::string line;
@@ -566,7 +578,7 @@ std::string Time::GetReadableDate ()
 	return std::string ( buf );
 }
 
-std::string Time::GetReadableTime ()
+std::string TimeClass::GetReadableTime ()
 {
 	char buf[200];
 	std::string line;
@@ -578,14 +590,14 @@ std::string Time::GetReadableTime ()
 	return std::string ( buf );
 }
 
-std::string Time::GetReadableSJT ()
+std::string TimeClass::GetReadableSJT ()
 {
 	char buf[200];	
 	sprintf ( buf, "%I64d", m_CurrTime );
 	return std::string ( buf );
 }
 
-std::string Time::GetReadableTime ( int fmt )
+std::string TimeClass::GetReadableTime ( int fmt )
 {
 	char buf[200];	
 	int hr, min, m, d, y, s, ms, ns;
@@ -597,7 +609,7 @@ std::string Time::GetReadableTime ( int fmt )
 	return std::string ( buf );
 }
 
-void Time::SetSystemTime ()
+void TimeClass::SetSystemTime ()
 {
 	int hr, mn, sec, m, d, y;
 	char timebuf[100];
@@ -639,12 +651,12 @@ void Time::SetSystemTime ()
 }
    
 
-double Time::GetSec ()
+double TimeClass::GetSec ()
 {
 	return ((double) m_CurrTime / (double) SEC_SCALAR );
 }
 
-double Time::GetMSec ()
+double TimeClass::GetMSec ()
 {
 	return ((double) m_CurrTime / (double) MSEC_SCALAR );
 
@@ -653,72 +665,72 @@ double Time::GetMSec ()
 	return ms;*/
 }
 
-void Time::Advance ( Time& t )
+void TimeClass::Advance ( TimeClass& t )
 {
 	m_CurrTime += t.GetSJT ();
 }
 
-void Time::AdvanceMinutes ( int n)
+void TimeClass::AdvanceMinutes ( int n)
 {
 	m_CurrTime += (sjtime) MIN_SCALAR * n;
 }
 
-void Time::AdvanceHours ( int n )
+void TimeClass::AdvanceHours ( int n )
 {
 	m_CurrTime += (sjtime) HR_SCALAR * n;	
 }
 
-void Time::AdvanceDays ( int n )
+void TimeClass::AdvanceDays ( int n )
 {
 	m_CurrTime += (sjtime) DAY_SCALAR * n;	
 }
 
-void Time::AdvanceSec ( int n )
+void TimeClass::AdvanceSec ( int n )
 {
 	m_CurrTime += (sjtime) SEC_SCALAR * n;	
 }
 
-void Time::AdvanceMins ( int n)
+void TimeClass::AdvanceMins ( int n)
 {
 	m_CurrTime += (sjtime) MIN_SCALAR * n;
 }	
 
-void Time::AdvanceMSec ( int n )
+void TimeClass::AdvanceMSec ( int n )
 {
 	m_CurrTime += (sjtime) MSEC_SCALAR * n;	
 }
 
-Time& Time::operator= ( const Time& op )	{ m_CurrTime = op.m_CurrTime; return *this; }
-Time& Time::operator= ( Time& op )			{ m_CurrTime = op.m_CurrTime; return *this; }
-bool Time::operator< ( const Time& op )		{ return (m_CurrTime < op.m_CurrTime); }
-bool Time::operator> ( const Time& op )		{ return (m_CurrTime > op.m_CurrTime); }
-bool Time::operator< ( Time& op )			{ return (m_CurrTime < op.m_CurrTime); }
-bool Time::operator> ( Time& op )			{ return (m_CurrTime > op.m_CurrTime); }
+TimeClass& TimeClass::operator= ( const TimeClass& op )	{ m_CurrTime = op.m_CurrTime; return *this; }
+TimeClass& TimeClass::operator= ( TimeClass& op )			{ m_CurrTime = op.m_CurrTime; return *this; }
+bool TimeClass::operator< ( const TimeClass& op )		{ return (m_CurrTime < op.m_CurrTime); }
+bool TimeClass::operator> ( const TimeClass& op )		{ return (m_CurrTime > op.m_CurrTime); }
+bool TimeClass::operator< ( TimeClass& op )			{ return (m_CurrTime < op.m_CurrTime); }
+bool TimeClass::operator> ( TimeClass& op )			{ return (m_CurrTime > op.m_CurrTime); }
 
-bool Time::operator<= ( const Time& op )		{ return (m_CurrTime <= op.m_CurrTime); }
-bool Time::operator>= ( const Time& op )		{ return (m_CurrTime >= op.m_CurrTime); }
-bool Time::operator<= ( Time& op )			{ return (m_CurrTime <= op.m_CurrTime); }
-bool Time::operator>= ( Time& op )			{ return (m_CurrTime >= op.m_CurrTime); }
+bool TimeClass::operator<= ( const TimeClass& op )		{ return (m_CurrTime <= op.m_CurrTime); }
+bool TimeClass::operator>= ( const TimeClass& op )		{ return (m_CurrTime >= op.m_CurrTime); }
+bool TimeClass::operator<= ( TimeClass& op )			{ return (m_CurrTime <= op.m_CurrTime); }
+bool TimeClass::operator>= ( TimeClass& op )			{ return (m_CurrTime >= op.m_CurrTime); }
 
-Time Time::operator- ( Time& op )
+TimeClass TimeClass::operator- ( TimeClass& op )
 {
-	return Time( m_CurrTime - op.GetSJT() );
+	return TimeClass( m_CurrTime - op.GetSJT() );
 }
-Time Time::operator+ ( Time& op )
+TimeClass TimeClass::operator+ ( TimeClass& op )
 {
-	return Time( m_CurrTime + op.GetSJT() );
+	return TimeClass( m_CurrTime + op.GetSJT() );
 }
 
-bool Time::operator== ( const Time& op )
+bool TimeClass::operator== ( const TimeClass& op )
 {
 	return (m_CurrTime == op.m_CurrTime);
 }
-bool Time::operator!= ( Time& op )
+bool TimeClass::operator!= ( TimeClass& op )
 {
 	return (m_CurrTime != op.m_CurrTime);
 }
 	
-void Time::RegressionTest ()
+void TimeClass::RegressionTest ()
 {
 	// This code verifies the Julian Date calculations are correct for all
 	// minutes over a range of years. Useful to debug type issues when

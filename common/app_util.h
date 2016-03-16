@@ -74,8 +74,17 @@
  *
  */
 
+
+
 #ifndef APP_UTIL
 	#define APP_UTIL
+
+
+#ifdef _WIND32
+#include "app_directx.h"
+#else
+//#include "app_opengl.h"
+#endif
 
 	#define DEGtoRAD		(3.141592/180.0)
 
@@ -113,7 +122,7 @@
 
 	// From app_opengl.h or app_directx.h
 	// DX/GL Device and Context are provided outside of app_util.	
-	extern void app_printf ( char* format, ... );
+	extern void app_printf (const char* format, ... );
 	extern char app_getch ();
 	#ifdef USE_DX
 		#include <d3d11.h>
@@ -130,7 +139,11 @@
 		extern int checkSHADER ( HRESULT hr, ID3D10Blob* blob );			
 		#define IDX_NULL	0xFFFFFFFF		// DirectX - cut index
 	#else
+		#ifdef _WIN32
 		#include "GLEW\glew.h"
+		#else
+		#include "GL/glew.h"
+		#endif
 		typedef	GLuint			BUF;		
 		typedef	GLuint			TEX;
 		extern void checkGL( char* msg );
@@ -410,7 +423,7 @@
 	class nvGui {
 	public:
 		nvGui ();
-		int		AddGui ( float x, float y, float w, float h, char* name, int gtype, int dtype, void* data, float vmin, float vmax );
+		int		AddGui ( float x, float y, float w, float h, const char* name, int gtype, int dtype, void* data, float vmin, float vmax );
 		bool	guiChanged ( int n );
 		bool	MouseDown ( float x, float y );
 		bool	MouseDrag ( float x, float y );
@@ -423,7 +436,7 @@
 
 	extern nvGui	g_Gui;
 	extern void		drawGui ();	
-	extern int		addGui ( float x, float y, float w, float h, char* name, int gtype, int dtype, void* data, float vmin, float vmax );
+	extern int		addGui ( float x, float y, float w, float h, const char* name, int gtype, int dtype, void* data, float vmin, float vmax );
 	extern bool		guiMouseDown ( float x, float y );
 	extern bool		guiMouseDrag ( float x, float y );
 	extern bool		guiChanged ( int n );

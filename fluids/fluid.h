@@ -22,15 +22,16 @@
 
 #ifndef DEF_FLUID
 	#define DEF_FLUID
-	
-	#include "vector.h"
 
-	#include "common_defs.h"
+
+//	#include "common_defs.h"
+//	#include "vector.h"
+#include "app_util.h"
 
 	struct Fluid {
 	public:
 		Vector3DF		pos;			// Basic particle (must match Particle class)
-		DWORD			clr;
+		ulong			clr;
 		int				next;
 		Vector3DF		vel;			
 		Vector3DF		vel_eval;		

@@ -41,15 +41,17 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <conio.h>
 
-#include "app_perf.h"
+#ifdef _WIN32
+#include <conio.h>
+#else
+
+#endif
+
 #include "fluid_defs.h"
 #include "fluid_system.h"
 
-#ifdef BUILD_CUDA
-	#include "fluid_system_host.cuh"
-#endif
+#include "fluid_system_host.cuh"
 
 #define EPSILON			0.00001f			//for collision detection
 
@@ -57,6 +59,7 @@ void FluidSystem::TransferToCUDA ()
 { 
 	CopyToCUDA ( (float*) mPos, (float*) mVel, (float*) mVelEval, (float*) mForce, mPressure, mDensity, mClusterCell, mGridNext, (char*) mClr ); 
 }
+
 void FluidSystem::TransferFromCUDA ()	
 {
 	CopyFromCUDA ( (float*) mPos, (float*) mVel, (float*) mVelEval, (float*) mForce, mPressure, mDensity, mClusterCell, mGridNext, (char*) mClr );
@@ -208,9 +211,9 @@ void FluidSystem::AllocateParticles ( int cnt )
 	mPos = (Vector3DF*)		malloc ( cnt*sizeof(Vector3DF) );
 	if ( srcPos != 0x0 )	{ memcpy ( mPos, srcPos, nump *sizeof(Vector3DF)); free ( srcPos ); }
 
-	DWORD* srcClr = mClr;	
-	mClr = (DWORD*)			malloc ( cnt*sizeof(DWORD) );
-	if ( srcClr != 0x0 )	{ memcpy ( mClr, srcClr, nump *sizeof(DWORD)); free ( srcClr ); }
+	ulong* srcClr = mClr;
+	mClr = (ulong*)			malloc ( cnt*sizeof(ulong) );
+	if ( srcClr != 0x0 )	{ memcpy ( mClr, srcClr, nump *sizeof(ulong)); free ( srcClr ); }
 	
 	Vector3DF* srcVel = mVel;
 	mVel = (Vector3DF*)		malloc ( cnt*sizeof(Vector3DF) );	
@@ -363,9 +366,9 @@ void FluidSystem::AddEmit ( float spacing )
 	}
 }
 
-void FluidSystem::record ( int param, std::string name, Time& start )
+void FluidSystem::record (int param, std::string name, TimeClass &start )
 {
-	Time stop;
+	TimeClass stop;
 	stop.SetSystemTime ();
 	stop = stop - start;
 	m_Param [ param ] = stop.GetMSec();
@@ -376,7 +379,7 @@ void FluidSystem::record ( int param, std::string name, Time& start )
 
 void FluidSystem::RunSearchCPU ()
 {
-	Time start;
+	TimeClass start;
 	// -- Insert particles on CPU 
 	InsertParticles ();
 	record ( PTIME_INSERT, "Insert CPU", start );
@@ -472,7 +475,7 @@ void FluidSystem::RunValidate ()
 
 void FluidSystem::RunSimulateCPUSlow ()
 {
-	Time start;
+	TimeClass start;
 	start.SetSystemTime ();
 	InsertParticles ();
 	record ( PTIME_INSERT, "Insert CPU", start );			
@@ -489,7 +492,7 @@ void FluidSystem::RunSimulateCPUSlow ()
 
 void FluidSystem::RunSimulateCPUGrid ()
 {
-	Time start;
+	TimeClass start;
 	start.SetSystemTime ();
 	PERF_PUSH ( "InsertCPU" );
 	InsertParticles ();
@@ -519,7 +522,7 @@ void FluidSystem::RunSimulateCUDARadix ()
 
 void FluidSystem::RunSimulateCUDAIndex ()
 {
-	Time start;
+	TimeClass start;
 	start.SetSystemTime ();
 	
 	PERF_PUSH ( "InsertCUDA" );
@@ -557,7 +560,7 @@ void FluidSystem::RunSimulateCUDAIndex ()
 
 void FluidSystem::RunSimulateCUDAFull ()
 {
-	Time start;
+	TimeClass start;
 	start.SetSystemTime ();
 
 	PERF_PUSH ( "InsertCUDA" );
@@ -595,7 +598,7 @@ void FluidSystem::RunSimulateCUDAFull ()
 
 void FluidSystem::RunSimulateCUDACluster ()
 {
-	Time start;
+	TimeClass start;
 	start.SetSystemTime ();
 	InsertParticlesCUDA ( 0x0, 0x0, 0x0 );
 	record ( PTIME_INSERT, "Insert CUDA", start );			
@@ -696,7 +699,7 @@ void FluidSystem::PackParticles ()
 			*(float*) dat =		*(mDensity+j);		dat += sizeof(float);
 			*(int*) dat =		*(mClusterCell+j);	dat += sizeof(int);					// search cell
 			*(int*) dat =		c;					dat += sizeof(int);					// container cell
-			*(DWORD*) dat =		*(mClr+j);			dat += sizeof(DWORD);
+			*(ulong*) dat =		*(mClr+j);			dat += sizeof(ulong);
 			dat += sizeof(int);
 			j = *(mGridNext+j);
 			cnt++;
@@ -723,7 +726,7 @@ void FluidSystem::UnpackParticles ()
 	Vector3DF*  pveleval =	mVelEval;
 	float*		ppress =	mPressure;
 	float*		pdens =		mDensity;
-	DWORD*		pclr =		mClr;
+	ulong*		pclr =		mClr;
 
 	for (int n=0; n < mGoodPoints; n++ ) {
 		*ppos++ =		*(Vector3DF*) dat;		dat += sizeof(Vector3DF);
@@ -734,14 +737,14 @@ void FluidSystem::UnpackParticles ()
 		*pdens++ =		*(float*) dat;			dat += sizeof(float);		
 		dat += sizeof(int);
 		dat += sizeof(int);
-		*pclr++ =		*(DWORD*) dat;			dat += sizeof(DWORD);
+		*pclr++ =		*(ulong*) dat;			dat += sizeof(ulong);
 		dat += sizeof(int);
 	}
 }
 
 void FluidSystem::DebugPrintMemory ()
 {
-	int psize = 4*sizeof(Vector3DF) + sizeof(DWORD) + sizeof(unsigned short) + 2*sizeof(float) + sizeof(int) + sizeof(int)+sizeof(int);
+	int psize = 4*sizeof(Vector3DF) + sizeof(ulong) + sizeof(unsigned short) + 2*sizeof(float) + sizeof(int) + sizeof(int)+sizeof(int);
 	int gsize = 2*sizeof(int);
 	int nsize = sizeof(int) + sizeof(float);
 		
@@ -794,7 +797,7 @@ void FluidSystem::Advance ()
 	Vector3DF*	pvel = mVel;
 	Vector3DF*	pveleval = mVelEval;
 	Vector3DF*	pforce = mForce;
-	DWORD*		pclr = mClr;
+	ulong*		pclr = mClr;
 	float*		ppress = mPressure;
 	float*		pdensity = mDensity;
 
@@ -1620,7 +1623,7 @@ void FluidSystem::DrawGrid ()
 void FluidSystem::DrawParticle ( int p, int r1, int r2, Vector3DF clr )
 {
 	Vector3DF* ppos = mPos + p;
-	DWORD* pclr = mClr + p;
+	ulong* pclr = mClr + p;
 	
 	glDisable ( GL_DEPTH_TEST );
 	
@@ -1684,7 +1687,7 @@ void FluidSystem::DrawText ()
 
 	
 	Vector3DF* ppos = mPos;
-	DWORD* pclr = mClr;
+	ulong* pclr = mClr;
 	Vector3DF clr;
 	for (int n = 0; n < NumPoints(); n++) {
 	
@@ -1702,7 +1705,7 @@ void FluidSystem::Draw ( Camera3D& cam, float rad )
 	char* dat;
 	Vector3DF* ppos;
 	float* pdens;
-	DWORD* pclr;
+	ulong* pclr;
 		
 
 	glDisable ( GL_LIGHTING );
@@ -1968,7 +1971,7 @@ void FluidSystem::Record ()
 	Vector3DF*  ppos =		mPos;
 	Vector3DF*  pvel =		mVel;
 	float*		pdens =		mDensity;
-	DWORD*		pclr =		mClr;
+	ulong*		pclr =		mClr;
 	
 	char*		dat = mPackBuf;
 	int			channels;
@@ -1983,18 +1986,18 @@ void FluidSystem::Record ()
 	
 	// Write data
 	if ( channels == 2 ) {	
-		dsize = sizeof(Vector3DF)+sizeof(DWORD);
+		dsize = sizeof(Vector3DF)+sizeof(ulong);
 		for (int n=0; n < mNumPoints; n++ ) {
 			*(Vector3DF*) dat = *ppos++;		dat += sizeof(Vector3DF);
-			*(DWORD*)	  dat = *pclr++;		dat += sizeof(DWORD);
+			*(ulong*)	  dat = *pclr++;		dat += sizeof(ulong);
 		}
 	} else {
-		dsize = sizeof(Vector3DF)+sizeof(Vector3DF)+sizeof(float)+sizeof(DWORD);
+		dsize = sizeof(Vector3DF)+sizeof(Vector3DF)+sizeof(float)+sizeof(ulong);
 		for (int n=0; n < mNumPoints; n++ ) {
 			*(Vector3DF*) dat = *ppos++;		dat += sizeof(Vector3DF);
 			*(Vector3DF*) dat = *pvel++;		dat += sizeof(Vector3DF);
 			*(float*)	  dat = *pdens++;		dat += sizeof(float);
-			*(DWORD*)	  dat = *pclr++;		dat += sizeof(DWORD);
+			*(ulong*)	  dat = *pclr++;		dat += sizeof(ulong);
 		}
 	}
 		
@@ -2048,26 +2051,26 @@ void FluidSystem::RunPlayback ()
 	Vector3DF*  ppos =		mPos;
 	Vector3DF*  pvel =		mVel;
 	float*		pdens =		mDensity;
-	DWORD*		pclr =		mClr;
+	ulong*		pclr =		mClr;
 
 	// Read data
 	if ( channels == 2 ) {
-		dsize = sizeof(Vector3DF)+sizeof(DWORD);
+		dsize = sizeof(Vector3DF)+sizeof(ulong);
 		result = fread ( dat, dsize, mNumPoints, mFP );
 		if ( ferror (mFP) || result != mNumPoints ) { StartPlayback ( mFileNum ); return; }
 		for (int n=0; n < mNumPoints; n++ ) {
 			*ppos++ =  *(Vector3DF*) dat;		dat += sizeof(Vector3DF);
-			*pclr++ =  *(DWORD*) dat;			dat += sizeof(DWORD);
+			*pclr++ =  *(ulong*) dat;			dat += sizeof(ulong);
 		}
 	} else {
-		dsize = sizeof(Vector3DF)+sizeof(Vector3DF)+sizeof(float)+sizeof(DWORD);
+		dsize = sizeof(Vector3DF)+sizeof(Vector3DF)+sizeof(float)+sizeof(ulong);
 		result = fread ( dat, dsize, mNumPoints, mFP );
 		if ( ferror (mFP) || result != mNumPoints ) { StartPlayback ( mFileNum ); return; }
 		for (int n=0; n < mNumPoints; n++ ) {
 			*ppos++ =  *(Vector3DF*) dat;		dat += sizeof(Vector3DF);
 			*pvel++ =  *(Vector3DF*) dat;		dat += sizeof(Vector3DF);
 			*pdens++ = *(float*) dat;			dat += sizeof(float);
-			*pclr++ =  *(DWORD*) dat;			dat += sizeof(DWORD);
+			*pclr++ =  *(ulong*) dat;			dat += sizeof(ulong);
 		}
 	}
 }
@@ -2420,7 +2423,7 @@ void FluidSystem::TestPrefixSum ( int num )
 
 	// Prefix Sum on CPU
 	int sum = 0;
-	Time start, cpu_stop, gpu_stop;
+	TimeClass start, cpu_stop, gpu_stop;
 	start.SetSystemTime ();
 	for (int n=0; n < num; n++) {		
 		listOutCPU[n] = sum;
@@ -2448,7 +2451,11 @@ void FluidSystem::TestPrefixSum ( int num )
 	}
 	app_printf ( "Validate: %d OK. (Bad: %d)\n", ok, num-ok );
 	app_printf ( "Press any key to continue..\n");
+#ifdef _WIN32
 	_getch();
+#else
+	getchar();
+#endif
 }
 
 

@@ -12,6 +12,9 @@
 #ifndef _SCAN_BEST_KERNEL_CU_
 #define _SCAN_BEST_KERNEL_CU_
 
+#define CUDA_KERNEL
+#include "fluid_system_kern.cuh"
+
 // Define this to more rigorously avoid bank conflicts, 
 // even at the lower (root) levels of the tree
 // Note that due to the higher addressing overhead, performance 

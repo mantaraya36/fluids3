@@ -43,7 +43,15 @@
  * 12. GPU markers use NVIDIA's Perfmarkers for viewing in NVIDIA NSIGHT
 */
 
+#ifndef INC_APP_PERF
+#define INC_APP_PERF
+
+#ifdef _WIN32
 #include <windows.h>
+#else
+#define __stdcall
+#endif
+
 #include <stdio.h>
 
 //----------------- PERFORMANCE MARKERS
@@ -171,18 +179,18 @@ extern "C" void PERF_SET ( bool cpu, int lev, bool gpu, char* fname );
 	//   SJT Range (in Julian Days) = +2400000.5 + (+/-106,751 MJD)	
 	//   SJT Range (in Julian Days) = 1566 AD to 2151 AD, with 1 nanosecond accuracy.
 
-	class Time {
+	class TimeClass {
 	public:
-		Time ();
-		Time ( sjtime t )			{ m_CurrTime = t; }
-		Time ( int sec, int msec )	{ m_CurrTime = 0; SetTime ( sec, msec ); }
+		TimeClass ();
+		TimeClass ( sjtime t )			{ m_CurrTime = t; }
+		TimeClass ( int sec, int msec )	{ m_CurrTime = 0; SetTime ( sec, msec ); }
 		
 		// Set time
 		bool SetTime ( int sec );									// Set seconds
 		bool SetTime ( int sec, int msec );							// Set seconds, msecs	
 		bool SetTime ( int hr, int min, int m, int d, int y);		// Set hr/min, month, day, year	
 		bool SetTime ( int hr, int min, int m, int d, int y, int s, int ms, int ns);	// Set hr/min, month, day, year, sec, ms, ns
-		bool SetTime ( Time& t )	{ m_CurrTime = t.GetSJT(); return true;} // Set to another Time object				
+		bool SetTime ( TimeClass& t )	{ m_CurrTime = t.GetSJT(); return true;} // Set to another Time object
 		bool SetTime ( std::string line );							// Set time from string (hr,min,sec)
 		bool SetDate ( std::string line );							// Set date from string (mo,day,yr)		
 		void SetSystemTime ();										// Set date/time to system clock		
@@ -207,7 +215,7 @@ extern "C" void PERF_SET ( bool cpu, int lev, bool gpu, char* fname );
 		sjtime GetSJT ()			{ return m_CurrTime; } 			
 
 		// Advance Time
-		void Advance ( Time& t );
+		void Advance ( TimeClass& t );
 		void AdvanceMinutes ( int n);
 		void AdvanceHours ( int n );
 		void AdvanceDays ( int n );
@@ -229,30 +237,30 @@ extern "C" void PERF_SET ( bool cpu, int lev, bool gpu, char* fname );
 		int GetMJD ();
 
 		// Time operators
-		Time& operator= ( const Time& op );
-		Time& operator= ( Time& op );
-		bool operator< ( const Time& op );
-		bool operator< ( Time& op );
-		bool operator> ( const Time& op );
-		bool operator> ( Time& op );		
-		bool operator<= ( const Time& op );
-		bool operator<= ( Time& op );
-		bool operator>= ( const Time& op );
-		bool operator>= ( Time& op );	
-		bool operator== ( const Time& op );
-		bool operator!= ( Time& op );
-		Time operator- ( Time& op );
-		Time operator+ ( Time& op );
+		TimeClass& operator= ( const TimeClass& op );
+		TimeClass& operator= ( TimeClass& op );
+		bool operator< ( const TimeClass& op );
+		bool operator< ( TimeClass& op );
+		bool operator> ( const TimeClass& op );
+		bool operator> ( TimeClass& op );
+		bool operator<= ( const TimeClass& op );
+		bool operator<= ( TimeClass& op );
+		bool operator>= ( const TimeClass& op );
+		bool operator>= ( TimeClass& op );
+		bool operator== ( const TimeClass& op );
+		bool operator!= ( TimeClass& op );
+		TimeClass operator- ( TimeClass& op );
+		TimeClass operator+ ( TimeClass& op );
 
 		// Elapsed Times
-		int GetElapsedDays ( Time& base );		
-		int GetElapsedWeeks ( Time& base );
-		int GetElapsedMonths ( Time& base );
-		int GetElapsedYears ( Time& base );
-		int GetFracDay ( Time& base );			// Return Unit = 5 mins
-		int GetFracWeek ( Time& base );			// Return Unit = 1 hr
-		int GetFracMonth ( Time& base );		// Return Unit = 4 hrs
-		int GetFracYear ( Time& base );			// Return Unit = 1 day
+		int GetElapsedDays ( TimeClass& base );
+		int GetElapsedWeeks ( TimeClass& base );
+		int GetElapsedMonths ( TimeClass& base );
+		int GetElapsedYears ( TimeClass& base );
+		int GetFracDay ( TimeClass& base );			// Return Unit = 5 mins
+		int GetFracWeek ( TimeClass& base );			// Return Unit = 1 hr
+		int GetFracMonth ( TimeClass& base );		// Return Unit = 4 hrs
+		int GetFracYear ( TimeClass& base );			// Return Unit = 1 day
 		int GetDayOfWeek ();
 		int GetWeekOfYear ();
 
@@ -270,4 +278,5 @@ extern "C" void PERF_SET ( bool cpu, int lev, bool gpu, char* fname );
 
 //---------------- END TIMING CLASS
 
+#endif // INC_APP_PERF
 

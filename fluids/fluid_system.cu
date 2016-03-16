@@ -1,5 +1,5 @@
 
-#include <cutil.h>
+//#include <cutil.h>
 #include <cstdlib>
 #include <cstdio>
 #include <string.h>
@@ -11,7 +11,7 @@
 #endif
 #include <cuda_gl_interop.h>
 
-#include "fluid_system_kern.cu"
+#include "fluid_system_kern.cuh"
 
 extern "C"
 {
@@ -27,24 +27,26 @@ void computeNumBlocks (int numPnts, int minThreads, int &numBlocks, int &numThre
 }
 
 
-void Grid_InsertParticlesCUDA ( uchar* data, uint stride, uint numPoints )
+void Grid_InsertParticlesCUDA ( unsigned char* data, uint stride, uint numPoints )
 {
     int numThreads, numBlocks;
     computeNumBlocks (numPoints, 256, numBlocks, numThreads);
 
 	// transfer point data to device
-    char* pntData;
-	size = numPoints * stride;
+    bufList* pntData;
+	size_t size = (size_t) numPoints * (size_t) stride;
 	cudaMalloc( (void**) &pntData, size);
 	cudaMemcpy( pntData, data, size, cudaMemcpyHostToDevice);    
 
     // execute the kernel
-    insertParticles<<< numBlocks, numThreads >>> ( pntData, stride );
+    insertParticles <<< numBlocks, numThreads >>> ( *pntData, stride );
     
     // transfer data back to host
-    cudaMemcpy( data, pntData, cudaMemcpyDeviceToHost);
+    cudaMemcpy( data, pntData, sizeof(bufList), cudaMemcpyDeviceToHost);
     
     // check if kernel invocation generated an error
-    CUT_CHECK_ERROR("Kernel execution failed");
-    CUDA_SAFE_CALL(cudaGLUnmapBufferObject(vboPos));
+//FIXME: Not compatible with recent versions of CUDA
+//    CUT_CHECK_ERROR("Kernel execution failed");
+//    CUDA_SAFE_CALL(cudaGLUnmapBufferObject(vboPos));
+}
 }

@@ -50,6 +50,7 @@
 	#include <math.h>
 
 	#include "xml_settings.h"
+#include "app_perf.h"
 
 	#define MAX_PARAM			50
 	#define GRID_UCHAR			0xFF
@@ -160,7 +161,7 @@
 		float			density;		// 52
 		int				grid_cell;		// 56
 		int				grid_next;		// 60
-		DWORD			clr;			// 64
+		ulong			clr;			// 64
 		int				padding;		// 68
 	};
 
@@ -231,7 +232,7 @@
 		void ValidateResults ();
 		void TestPrefixSum ( int num );
 		void DebugPrintMemory ();
-		void record ( int param, std::string, Time& start );
+		void record ( int param, std::string, TimeClass& start );
 		int SelectParticle ( int x, int y, int wx, int wy, Camera3D& cam );
 		int GetSelected ()		{ return mSelected; }
 
@@ -320,7 +321,7 @@
 		int						mMaxPoints;
 		int						mGoodPoints;
 		Vector3DF*				mPos;
-		DWORD*					mClr;
+		ulong*					mClr;
 		Vector3DF*				mVel;
 		Vector3DF*				mVelEval;
 		unsigned short*			mAge;

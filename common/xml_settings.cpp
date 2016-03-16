@@ -2,7 +2,7 @@
 #include "xml_settings.h"
 #include "string_helper.h"
 
-#pragma message ( "   Include: tinyxml.h (TinyXml)" )
+//#pragma message ( "   Include: tinyxml.h (TinyXml)" )
 #include "tinyxml.h"
 
 
@@ -26,7 +26,8 @@ bool XmlSettings::Load( std::string filename, std::string section )
 	if ( mCurrBase != 0x0 ) { delete mCurrBase; }
 	if ( mRoot != 0x0 ) { delete mRoot; }
 
-	mDocument = new TiXmlDocument( filename );
+	mDocument = new TiXmlDocument(filename.c_str());
+
 	if (!mDocument->LoadFile()) return false;
 
 	TiXmlHandle hDoc(mDocument);
